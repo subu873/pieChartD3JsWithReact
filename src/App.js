@@ -1,7 +1,7 @@
 import React, {useState} from "react";
 import ReactDOM from "react-dom";
 import PieChart from "./PieChart";
-import PieChart2 from "./PieChart2";
+
 
 
 export default function App() {
