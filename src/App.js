@@ -1,25 +1,43 @@
-import logo from './logo.svg';
-import './App.css';
+import React, {useState} from "react";
+import ReactDOM from "react-dom";
+import PieChart from "./PieChart";
+import PieChart2 from "./PieChart2";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+export default function App() {
+
+
+    const [theme, setTheme] = useState('dark')
+
+    const dummyData = [
+        {name: "Oranges", value: 22.3},
+        {name: "Apples", value: 12.0},
+        {name: "Pink Guavas", value: 17.5},
+        {name: "Watermelons / Pineapples", value: 28.2},
+        {name: "Others", value: 20.0}
+    ]
+
+    const handleThemeChange = () => {
+        if (theme === 'dark') {
+            setTheme('light')
+        } else {
+            setTheme('dark')
+        }
+
+    }
+
+
+    return (
+        <div className="App">
+            <PieChart
+                theme={theme}
+                data={dummyData}
+                handleThemeClick={handleThemeChange}
+            />
+
+        </div>
+    );
 }
 
-export default App;
+const rootElement = document.getElementById("root");
+ReactDOM.render(<App/>, rootElement);
