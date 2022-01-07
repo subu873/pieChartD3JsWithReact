@@ -7,6 +7,7 @@ import PieChart from "./PieChart";
 export default function App() {
 
 
+
     const [theme, setTheme] = useState('dark')
 
     const dummyData = [
@@ -23,7 +24,6 @@ export default function App() {
         } else {
             setTheme('dark')
         }
-
     }
 
 

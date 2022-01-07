@@ -1,149 +1,160 @@
-import React, {useEffect, useRef, useState} from "react";
+import React, {useEffect,useRef} from "react";
 import * as d3 from "d3";
 import '../src/App.css'
 
 const Pie = props => {
 
-    const [width] = useState(400);
-    const [height] = useState(400);
-    const [innerRadius] = useState(0);
-    const [outerRadius] = useState(150);
-    const [bgColor, setBgColor] = useState('')
-
-    const [darkPieColors] = useState(["#0F1521", "#2AD000", "#E20001", "#F99500", "#FFFFFF"])
-    const [lightPieColor] = useState(["#1C1F21", "#2AD000", "#E20001", "#F99500", "#273755"])
-
-    const [pieColors, setPieColors] = useState([])
-
-
-    const ref = useRef(null);
-
-    const createPie = d3
-        .pie()
-        .value(d => d.value)
-        .sort(null);
-
-    const createArc = d3
-        .arc()
-        .innerRadius(innerRadius)
-        .outerRadius(outerRadius);
-
-    // setting color of pie chart for each arc
-
-    const format = d3.format(".2f");
-
-    const formatText = (str) => {
-        const length = str.length;
-        if (length > 10) {
-            return str.substring(0, 9) + '..'
-        } else {
-            return str.substring(0,10)
-        }
-
-    }
-
+    const ref = useRef(null)
 
     useEffect(() => {
+        var svg = d3.select(ref.current)
+            .append("svg")
+            .append("g")
 
-        if (props.theme) {
-            if (props.theme === 'dark') {
-                // background color changes when theme is dark
-                setBgColor('#273755')
-                setPieColors(darkPieColors)
-            } else if (props.theme === 'light') {
-                // background color changes when theme is light
-                setBgColor('#F2F4F6')
-                setPieColors(lightPieColor)
-            }
+        svg.append("g")
+            .attr("class", "slices");
+        svg.append("g")
+            .attr("class", "labels");
+        svg.append("g")
+            .attr("class", "lines");
+
+        var width = 960,
+            height = 450,
+            radius = Math.min(width, height) / 2;
+
+        var pie = d3.pie()
+            .sort(null)
+            .value(function (d) {
+                return d.value;
+            });
+
+        var arc = d3.arc()
+            .outerRadius(radius * 0.8)
+            .innerRadius(radius * 0.4);
+
+        var outerArc = d3.arc()
+            .innerRadius(radius * 0.9)
+            .outerRadius(radius * 0.9);
+
+        svg.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+        var key = function (d) {
+            return d.data.label;
+        };
+
+        var color = d3.scaleOrdinal()
+            .domain(["Lorem ipsum", "dolor sit", "amet", "consectetur", "adipisicing", "elit", "sed", "do", "eiusmod", "tempor", "incididunt"])
+            .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+        function randomData() {
+            var labels = color.domain();
+            return labels.map(function (label) {
+                return {label: label, value: Math.random()}
+            });
         }
 
-    }, [props.theme])
 
-    useEffect(
-        () => {
-            const data = createPie(props.data);
-            const group = d3.select(ref.current);
+        function change(data) {
 
-            //changing color based on theme
-            const colors = d3.scaleOrdinal(pieColors);
+            /* ------- PIE SLICES -------*/
+            var slice = svg.select(".slices").selectAll("path.slice")
+                .data(pie(data), key);
 
-            const groupWithData = group.selectAll("g.arc").data(data);
-
-
-            groupWithData.exit().remove();
-
-            const groupWithUpdate = groupWithData
-                .enter()
-                .append("g")
-                .attr("class", "arc")
-                .on("mouseover", function (event, d) {
-                    d3.select("#tooltip")
-                        .style("left", event.pageX + "px")
-                        .style("top", event.pageY + "px")
-                        .style("opacity", 1)
-                        .select("#value")
-                        .text(d.data.name + " - " + d.value);
+            slice.enter()
+                .insert("path")
+                .style("fill", function (d) {
+                    return color(d.data.label);
                 })
-                .on("mouseout", function () {
-                    // Hide the tooltip
-                    d3.select("#tooltip")
-                        .style("opacity", 0);
-                    ;
+                .attr("class", "slice");
+
+            slice
+                .transition().duration(1000)
+                .attrTween("d", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        return arc(interpolate(t));
+                    };
+                })
+
+            slice.exit()
+                .remove();
+
+            /* ------- TEXT LABELS -------*/
+
+            var text = svg.select(".labels").selectAll("text")
+                .data(pie(data), key);
+
+            text.enter()
+                .append("text")
+                .attr("dy", ".35em")
+                .text(function (d) {
+                    return d.data.label;
                 });
 
-            const path = groupWithUpdate
-                .append("path")
-                .merge(groupWithData.select("path.arc"));
+            function midAngle(d) {
+                return d.startAngle + (d.endAngle - d.startAngle) / 2;
+            }
 
-            path
-                .attr("class", "arc")
-                .attr("d", createArc)
-                .attr("fill", (d, i) => colors(i));
+            text.transition().duration(1000)
+                .attrTween("transform", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return "translate(" + pos + ")";
+                    };
+                })
+                .styleTween("text-anchor", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        return midAngle(d2) < Math.PI ? "start" : "end";
+                    };
+                });
 
+            text.exit()
+                .remove();
 
-            const text = groupWithUpdate
-                .append("text")
-                .merge(groupWithData.select("text"));
+            /* ------- SLICE TO TEXT POLYLINES -------*/
 
-            text
-                .attr("text-anchor", "middle")
-                .attr("alignment-baseline", "middle")
-                .attr("transform", d => `translate(${createArc.centroid(d)})`)
-                .style("fill", "#dddddd")
-                .style("font-size", "0.8rem")
-                .style("font-weight", 600)
-                .style("width", 200)
-                .style("height", "auto")
-                .text(d => formatText(d.data.name))
-        },
-        [props.data, pieColors]
-    );
+            var polyline = svg.select(".lines").selectAll("polyline")
+                .data(pie(data), key);
 
+            polyline.enter()
+                .append("polyline");
+
+            polyline.transition().duration(1000)
+                .attrTween("points", function (d) {
+                    this._current = this._current || d;
+                    var interpolate = d3.interpolate(this._current, d);
+                    this._current = interpolate(0);
+                    return function (t) {
+                        var d2 = interpolate(t);
+                        var pos = outerArc.centroid(d2);
+                        pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+                        return [arc.centroid(d2), outerArc.centroid(d2), pos];
+                    };
+                });
+
+            polyline.exit()
+                .remove();
+        };
+
+        change(randomData())
+        change(randomData())
+
+    }, [])
 
     return (
-        <div className="themeColor" style={{background: bgColor}}>
-            <div className="container">
+        <div className="themeColor" ref={ref}>
 
-                <div className="chart-center">
-
-                    <div id="tooltip" className="hidden">
-                        <p><span id="value">100</span>%</p>
-                    </div>
-
-                    <svg width={width} height={height} viewBox={"0 0 300 300"} preserveAspectRatio={"xMinYMin meet"}>
-                        <g
-                            ref={ref}
-                            transform={`translate(${outerRadius} ${outerRadius})`}
-                        />
-                    </svg>
-                </div>
-                <div className="changeTheme">
-                    <button className="changeThemeBtn" onClick={props.handleThemeClick}>
-                        Change Theme
-                    </button>
-                </div>
-
-            </div>
         </div>
 
     );
